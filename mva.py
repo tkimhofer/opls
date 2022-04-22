@@ -968,7 +968,7 @@ class o_pls(comp_data, cv_sets):
         print(xsub.shape)
         print(x.shape)
 
-        y, z, = utility._cov_cor(t, xsub)
+        y, z, = _cov_cor(t, xsub)
         z = np.abs(z[0])
 
         fig, axs = plt.subplots(2, 1, sharex=True)
