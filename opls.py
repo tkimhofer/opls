@@ -1,8 +1,9 @@
-
 import numpy as np
+import math
+from sklearn import metrics
 
 
-class comp_data:
+class Comp_data:
     # X: spectral data, Y = Outcome (cat/cont), x/y centering, x/y scaling (uv/pareto/none)
     def __init__(self, X, Y, x_center=True, x_stype='uv', y_center=False, y_stype=None, ):
 
@@ -118,7 +119,7 @@ class comp_data:
         pass
 
 
-class nipals(comp_data):
+class Nipals(Comp_data):
     def __init__(self, Xsc, y, x_center, x_stype, y_center, y_stype, eps=1e-10):
         super().__init__(Xsc, y, x_center=x_center, x_stype=x_stype, y_center=y_center, y_stype=y_stype)
         self.eps = eps
@@ -152,7 +153,7 @@ class nipals(comp_data):
         self.R = self.Xsc - (self.t @ self.p.T)
 
 
-class orth_component(nipals):
+class Orth_component(Nipals):
     def __init__(self, Xsc, y, x_center, x_stype, y_center, y_stype, eps=1e-10):
         super().__init__(Xsc, y, x_center=x_center, x_stype=x_stype, y_center=y_center, y_stype=y_stype)
         self.eps = eps
@@ -175,16 +176,16 @@ class orth_component(nipals):
 
 # define object that combines pls and opls
 # component class is composed of pls or opls
-class component:
+class Component:
     def __init__(self, X, Y, ctype, x_center=True, x_stype='uv', y_center=True, y_stype=None, eps=1e-10, x_new=None,
                  ysc_new=None, tss_x=None, tss_y=None):
         self.ctype = ctype
         self.ysc_new = ysc_new
 
         if self.ctype == 'pls':
-            self.comp = nipals(X, Y, x_center, x_stype, y_center, y_stype, eps)
+            self.comp = Nipals(X, Y, x_center, x_stype, y_center, y_stype, eps)
         if self.ctype == 'opls':
-            self.comp = orth_component(X, Y, x_center, x_stype, y_center, y_stype, eps)
+            self.comp = Orth_component(X, Y, x_center, x_stype, y_center, y_stype, eps)
             self.comp.r2x_orth = self.r2((self.comp.to @ self.comp.po.T), tss_x=tss_x)  # ss in x that is Y-orthogonal
 
         # r2x of this component using tss_x
@@ -236,7 +237,7 @@ class component:
         return np.sum((x - np.mean(x, 0, keepdims=True)) ** 2)
 
 
-class cv_sets:
+class Cv_sets:
     def __init__(self, n, cvtype='mc', pars={'k': 1000, 'split_train': 2 / 3}):
         self.n = n
         self.cv_type = cvtype
@@ -249,7 +250,6 @@ class cv_sets:
             raise ValueError('check type value')
 
     def mc_cvset(self):
-        import numpy as np
         # sample split from data.n for k times
         n_sample = round(self.n * self.pars['split_train'])
 
@@ -262,8 +262,6 @@ class cv_sets:
         return (idc_train, idc_test)
 
     def kfold_cvset(self):
-        import numpy as np
-        import math
 
         if self.pars['k'] > self.n:
             raise ValueError('k-fold cv: k exceeding n')
@@ -319,7 +317,6 @@ class Qcomp:
         return (tpr, tnr, fpr, fnr)
 
     def roc(self):
-        from sklearn import metrics
         fpr, tpr, thresholds = metrics.roc_curve(self.y, self.y_hat, pos_label=np.max(self.y))
         self.auroc = metrics.auc(fpr, tpr)
         # np.array([self.confusion(cp=x) for x in cp])
@@ -330,11 +327,11 @@ class Qcomp:
         # plt.scatter(out[:, 2], out[:, 0])
 
 
-class O_pls(comp_data, cv_sets):
+class O_pls(Comp_data, Cv_sets):
     def __init__(self, X, Y, ctype='opls', x_center=True, x_stype='uv', y_center=True, y_stype=None, cvtype='k-fold',
                  pars={'k': 10}, eps=1e-10):
-        comp_data.__init__(self, X=X, Y=Y, x_center=x_center, x_stype=x_stype, y_center=y_center, y_stype=y_stype)
-        cv_sets.__init__(self, self.x_n, cvtype, pars)
+        Comp_data.__init__(self, X=X, Y=Y, x_center=x_center, x_stype=x_stype, y_center=y_center, y_stype=y_stype)
+        Cv_sets.__init__(self, self.x_n, cvtype, pars)
         self.n_oc = 0
         self.n_pd = 0
         self.ctype = ctype  # declared in fit fct
